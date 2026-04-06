@@ -1,0 +1,34 @@
+{
+  "name": "@noxecane/monday-dsl",
+  "version": "0.1.0",
+  "description": "Type-safe Monday.com GraphQL query builder and DSL",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p ./tsconfig.json",
+    "watch": "tsc --watch -p ./tsconfig.json",
+    "test": "jest --runInBand --detectOpenHandles --forceExit --passWithNoTests"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^28.1.6",
+    "@types/node": "^16.11.7",
+    "jest": "^28.1.0",
+    "ts-jest": "^28.0.2",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.2.4"
+  },
+  "dependencies": {
+    "form-data": "^4.0.2",
+    "inversify": "^6.0.1",
+    "node-fetch": "^3.3.2",
+    "reflect-metadata": "^0.1.13"
+  },
+  "peerDependencies": {
+    "reflect-metadata": "^0.1.13"
+  },
+  "packageManager": "yarn@4.10.2"
+}
