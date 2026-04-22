@@ -7,6 +7,7 @@ A type-safe Monday.com GraphQL client and query DSL. No dependency on the offici
 - [Installation](#installation)
 - [Setup](#setup)
 - [Defining a Schema](#defining-a-schema)
+- [Extending MondayBoard](#extending-mondayboard)
 - [Querying Items](#querying-items)
 - [Mutating Items](#mutating-items)
 - [Webhook Tracking](#webhook-tracking)
@@ -78,6 +79,63 @@ const board = new MondayBoard('123456', client, VacationSchema)
 | `asset`    | `Array<{ name: string; url: string }>` |
 | `tag`      | `string[]`                        |
 | `mirror`   | `string`                          |
+
+### Connect columns with nested schemas
+
+When a connect column links to another board you can expand the linked items by providing a `linked_schema`. The parsed result will be typed objects instead of raw item IDs.
+
+```typescript
+const TaskSchema = {
+  title:    { id: 'text__1',    type: 'text' },
+  priority: { id: 'status__1', type: 'status' },
+} as const
+
+const ProjectSchema = {
+  name:  { id: 'name',        type: 'text' },
+  tasks: {
+    id:            'connect__1',
+    type:          'connect',
+    linked_schema: TaskSchema,   // expand linked items using this schema
+  },
+} as const
+```
+
+When `linked_schema` is present, `board.query().returning({ tasks: true })` returns
+`Array<{ id: string; name: string; [TaskSchema keys] }>` objects instead of `string[]`.
+
+---
+
+## Extending MondayBoard
+
+The primary usage pattern is to subclass `MondayBoard` and add domain-specific query and mutation methods. This keeps board logic in one place and gives callers a clean, intention-revealing API.
+
+```typescript
+import { MondayBoard } from '@noxecane/monday-dsl'
+import { VacationSchema } from './schema'
+
+export class VacationRequestBoard extends MondayBoard<typeof VacationSchema> {
+  constructor(client: MondayClient) {
+    super('123456', client, VacationSchema)
+  }
+
+  /** Return all requests in a given status. */
+  async getByStatus(status: string) {
+    return this.findMany(
+      q => q.equals('status', status),
+      { email: true, status: true, start_date: true, days: true }
+    )
+  }
+
+  /** Approve a request by item ID. */
+  async approve(itemId: string) {
+    return this.mutation()
+      .update(itemId, { status: 'Approved' })
+      .exec()
+  }
+}
+```
+
+This pattern also makes board classes straightforward to mock or stub in tests.
 
 ---
 
@@ -512,6 +570,16 @@ constructor(client: MondayClient, schema: TSchema)
 | Method | Description |
 |---|---|
 | `handleWebhook(payload)` | Route an incoming webhook payload to decorated handlers |
+
+**Protected properties** (available in subclasses)
+
+| Property | Type | Description |
+|---|---|---|
+| `this.client` | `MondayClient` | The underlying HTTP client |
+| `this.admin` | `BoardAdmin` | Administrative operations on the board |
+| `this.schema` | `TSchema` | The board schema passed to the constructor |
+
+> Trackers are responsible for event routing, not data access. Prefer delegating queries and mutations to a `MondayBoard` subclass rather than calling `this.client` or `this.admin` directly inside handlers.
 
 **Decorators**
 
