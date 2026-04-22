@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/noxecane/monday-dsl.git"
+    "url": "git+https://github.com/noxecane/monday-dsl.git"
   },
   "homepage": "https://github.com/noxecane/monday-dsl#readme",
   "keywords": [
