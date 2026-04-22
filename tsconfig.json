@@ -11,10 +11,9 @@
     "noUnusedLocals": true,
     "moduleResolution": "node",
     "typeRoots": ["./node_modules/@types"],
-    "types": ["reflect-metadata", "jest", "node"],
+    "types": ["jest", "node"],
     "esModuleInterop": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
     "skipLibCheck": true,
     "declaration": true,
     "declarationMap": true

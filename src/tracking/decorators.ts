@@ -1,6 +1,6 @@
 import { InternalEvent } from './types'
 
-const HANDLERS_KEY = Symbol.for('monday.tracker.handlers')
+const registry = new WeakMap<object, HandlerMetadata[]>()
 
 export interface HandlerMetadata {
   method: string
@@ -60,12 +60,12 @@ export function onCreate(): MethodDecorator {
   }
 }
 
-function addHandler(constructor: any, handler: HandlerMetadata) {
-  const handlers: HandlerMetadata[] = Reflect.getMetadata(HANDLERS_KEY, constructor) || []
+function addHandler(constructor: object, handler: HandlerMetadata) {
+  const handlers = registry.get(constructor) || []
   handlers.push(handler)
-  Reflect.defineMetadata(HANDLERS_KEY, handlers, constructor)
+  registry.set(constructor, handlers)
 }
 
-export function getHandlers(constructor: any): HandlerMetadata[] {
-  return Reflect.getMetadata(HANDLERS_KEY, constructor) || []
+export function getHandlers(constructor: object): HandlerMetadata[] {
+  return registry.get(constructor) || []
 }
