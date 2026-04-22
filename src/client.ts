@@ -5,7 +5,6 @@
  */
 
 import FormData from 'form-data'
-import { injectable } from 'inversify'
 import fetch, { Response } from 'node-fetch'
 
 import {
@@ -99,7 +98,6 @@ export interface ColumnValue {
  * Provides comprehensive error handling and validation
  * TODO: rewrite the monday client to use HTTP agent. Also use that chance to review error handling.
  */
-@injectable()
 export class MondayFetchClient implements MondayClient {
   constructor(private readonly url: string, private readonly token: string) {}
 

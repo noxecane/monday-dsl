@@ -2,6 +2,22 @@
   "name": "@noxecane/monday-dsl",
   "version": "0.1.0",
   "description": "Type-safe Monday.com GraphQL query builder and DSL",
+  "author": "Kunle Arewa",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noxecane/monday-dsl.git"
+  },
+  "homepage": "https://github.com/noxecane/monday-dsl#readme",
+  "keywords": [
+    "monday",
+    "monday.com",
+    "graphql",
+    "query-builder",
+    "dsl",
+    "typescript",
+    "webhook"
+  ],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -12,7 +28,6 @@
     "watch": "tsc --watch -p ./tsconfig.json",
     "test": "jest --runInBand --detectOpenHandles --forceExit --passWithNoTests"
   },
-  "license": "MIT",
   "devDependencies": {
     "@types/jest": "^28.1.6",
     "@types/node": "^16.11.7",
@@ -23,7 +38,6 @@
   },
   "dependencies": {
     "form-data": "^4.0.2",
-    "inversify": "^6.0.1",
     "node-fetch": "^3.3.2"
   },
   "packageManager": "yarn@4.10.2"
