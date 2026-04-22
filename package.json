@@ -1,6 +1,6 @@
 {
   "name": "@noxecane/monday-dsl",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Type-safe Monday.com GraphQL query builder and DSL",
   "author": "Kunle Arewa",
   "license": "MIT",
