@@ -181,6 +181,30 @@ Chain filter methods before the terminal call. Multiple filters are combined wit
 .isNotEmpty('manager')
 ```
 
+### Filtering by group
+
+```typescript
+// Items in a specific group
+board.query().inGroup('group_id').returning({ email: true })
+
+// Items across multiple groups
+board.query().inGroup('group_a', 'group_b').returning({ email: true })
+```
+
+### Including group info in results
+
+Pass `{ includeGroup: true }` as a second argument to any terminal method. The returned items will have a `group` property typed as `MondayGroup`.
+
+```typescript
+const items = await board.query()
+  .equals('status', 'Approved')
+  .returning({ email: true, status: true }, { includeGroup: true })
+
+// items[0].group → { id, title, position, archived }
+```
+
+This option is supported on all terminal methods: `returning`, `first`, `all`, `page`, `paginate`, `getById`, and the `MondayBoard` convenience methods `getById`, `findOne`, and `findMany`.
+
 ### Ordering and limiting
 
 ```typescript
@@ -369,7 +393,7 @@ app.post('/webhooks/vacation', async (req, res) => {
 
 ## Board Administration
 
-`BoardAdmin` handles infrastructure-level operations on boards.
+`BoardAdmin` handles infrastructure-level operations: fetching board and folder metadata, managing webhooks, columns, users, and groups.
 
 ```typescript
 import { BoardAdmin } from '@noxecane/monday-dsl'
@@ -377,53 +401,77 @@ import { BoardAdmin } from '@noxecane/monday-dsl'
 const admin = new BoardAdmin(client)
 ```
 
+### Board metadata
+
+Query any subset of board fields. The return type is inferred from the selection.
+
+```typescript
+const info = await admin.board('123456').returning({
+  id: true,
+  name: true,
+  state: true,
+  board_kind: true,
+  items_count: true,
+  created_at: true,
+})
+// → Pick<Board, 'id' | 'name' | 'state' | 'board_kind' | 'items_count' | 'created_at'>
+```
+
+Available fields: `id`, `name`, `description`, `state`, `board_kind`, `items_count`, `created_at`, `updated_at`, `board_folder_id`.
+
+### Folder metadata
+
+```typescript
+const folder = await admin.folder('folder-id').returning({
+  id: true,
+  name: true,
+  parent: true,          // always returns { id, name }
+  sub_folders: true,     // always returns [{ id, name }]
+  children: { id: true, name: true, created_at: true },
+})
+```
+
+`parent` and `sub_folders` always return `{ id, name }`. To query a sub-folder in depth, pass its id to a new `admin.folder()` call. `children` are boards — any subset of board fields can be selected.
+
 ### Webhooks
 
 ```typescript
-// Create
+// Query webhooks with field selection
+const webhooks = await admin.webhooks('123456').returning({
+  id: true,
+  event: true,
+  config: true,  // returns { column?, labelIndex?, groupId? }
+})
+
+// Register a webhook
 await admin.createWebhook('123456', 'https://your-app.com/webhook', {
   event: 'change_specific_column_value',
   config: { columnId: 'status__1' }
 })
 
-// List
-const webhooks = await admin.getWebhooks('123456')
-
-// Delete one
+// Delete
 await admin.deleteWebhook('webhook-id')
-
-// Delete many
 await admin.deleteWebhooks(['id-1', 'id-2', 'id-3'])
 ```
 
 ### Columns
 
 ```typescript
-// List columns
 const columns = await admin.getColumns('123456')
-
-// Get column settings (labels, colors, etc.)
 const settings = await admin.getColumnSettings('123456')
 
-// Create a column
 await admin.createColumn('123456', 'approval__1', 'Approval Status', {
   type: 'status',
   labels: ['Pending', 'Approved', 'Rejected']
 })
 ```
 
-### Users, groups, and boards
+### Users and groups
 
 ```typescript
-// All non-guest users (paginated)
 const users = await admin.getAllUsers(100, 1)
-
-// Groups in a board
 const groups = await admin.getGroups('123456')
-
-// Boards in a folder
-const boards = await admin.getBoardsByFolder('folder-id')
-const allBoards = await admin.getBoardsByFolder('folder-id', /* recursive */ true)
+// groups → [{ id, title, position, archived }]
 ```
 
 ---
@@ -498,9 +546,11 @@ new MondayBoard(boardId: string, client: MondayClient, schema: TSchema)
 |---|---|---|
 | `query()` | `BoardQuery<TSchema>` | Start a chainable query builder |
 | `mutation()` | `BoardMutation<TSchema>` | Start a chainable mutation builder |
-| `getById(itemId, selection)` | `Promise<Item \| null>` | Fetch a single item by ID |
-| `findOne(finder, selection)` | `Promise<Item \| null>` | Apply filters, return first match |
-| `findMany(finder, selection)` | `Promise<Item[]>` | Apply filters, return all matches |
+| `getById(itemId, selection, options?)` | `Promise<Item \| null>` | Fetch a single item by ID |
+| `findOne(finder, selection, options?)` | `Promise<Item \| null>` | Apply filters, return first match |
+| `findMany(finder, selection, options?)` | `Promise<Item[]>` | Apply filters, return all matches |
+
+`options` accepts `{ includeGroup: true }` to include `group: MondayGroup` on each returned item.
 
 ---
 
@@ -531,17 +581,20 @@ All filter methods return `this` for chaining. Terminal methods execute the requ
 | `.limit(n)` | Return at most `n` items |
 | `.cursor(cursor)` | Start from a pagination cursor |
 | `.orderBy(column, direction?)` | Order results (`'asc'` or `'desc'`, default `'desc'`) |
+| `.inGroup(...groupIds)` | Restrict to one or more groups by ID |
 
 **Terminal methods**
 
+All terminal methods accept an optional `options` argument. Pass `{ includeGroup: true }` to include `group: MondayGroup` on each item.
+
 | Method | Returns | Description |
 |---|---|---|
-| `.returning(selection)` | `Promise<Item[]>` | Fetch one page of results |
-| `.first(selection)` | `Promise<Item \| null>` | Fetch first match |
-| `.all(selection, maxPages?)` | `Promise<Item[]>` | Fetch all pages (default max: 10) |
-| `.page(selection)` | `Promise<PageResult<Item>>` | Fetch one page with cursor metadata |
-| `.paginate(selection, maxPages?)` | `AsyncGenerator<PageResult<Item>>` | Lazy page-by-page iteration |
-| `.getById(itemId, selection)` | `Promise<Item \| null>` | Fetch by item ID |
+| `.returning(selection, options?)` | `Promise<Item[]>` | Fetch one page of results |
+| `.first(selection, options?)` | `Promise<Item \| null>` | Fetch first match |
+| `.all(selection, maxPages?, options?)` | `Promise<Item[]>` | Fetch all pages (default max: 10) |
+| `.page(selection, options?)` | `Promise<PageResult<Item>>` | Fetch one page with cursor metadata |
+| `.paginate(selection, maxPages?, options?)` | `AsyncGenerator<PageResult<Item>>` | Lazy page-by-page iteration |
+| `.getById(itemId, selection, options?)` | `Promise<Item \| null>` | Fetch by item ID |
 
 ---
 
@@ -599,15 +652,15 @@ new BoardAdmin(client: MondayClient)
 
 | Method | Returns | Description |
 |---|---|---|
-| `getBoardName(boardId)` | `Promise<string>` | Board name |
-| `getGroups(boardId)` | `Promise<Group[]>` | All groups in board |
+| `board(boardId)` | `BoardQueryBuilder` | Board metadata with field selection |
+| `folder(folderId)` | `FolderQueryBuilder` | Folder metadata with field selection |
+| `webhooks(boardId)` | `WebhookQueryBuilder` | Webhooks with field selection |
+| `createWebhook(boardId, url, eventConfig)` | `Promise<{ id, board_id }>` | Register a webhook |
+| `deleteWebhook(webhookId)` | `Promise<string>` | Delete one webhook |
+| `deleteWebhooks(webhookIds)` | `Promise<string[]>` | Delete multiple webhooks |
+| `getGroups(boardId)` | `Promise<Group[]>` | All groups — id, title, position, archived |
 | `getAllUsers(limit?, page?)` | `Promise<User[]>` | Non-guest users |
 | `getColumns(boardId)` | `Promise<Column[]>` | All columns |
 | `getColumnSettings(boardId)` | `Promise<Record<string, any>>` | Column label/settings data |
 | `createColumn(boardId, id, title, config)` | `Promise<Column>` | Create a column |
-| `createWebhook(boardId, url, eventConfig)` | `Promise<{ id, board_id }>` | Register a webhook |
-| `deleteWebhook(webhookId)` | `Promise<string>` | Delete one webhook |
-| `deleteWebhooks(webhookIds)` | `Promise<string[]>` | Delete multiple webhooks |
-| `getWebhooks(boardId)` | `Promise<Webhook[]>` | List webhooks for a board |
-| `getBoardsByFolder(folderId, recursive?)` | `Promise<Array<{ id, name }>>` | Boards in a folder |
 | `withTemporaryItem(boardId, operation)` | `Promise<T>` | Create a temp item, run operation, auto-delete |
