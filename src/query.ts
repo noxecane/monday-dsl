@@ -8,7 +8,16 @@ import { Board, MondayClient, Objects } from './client'
 import { columns } from './fragments'
 import { GraphQLBuilder } from './graphql'
 import { ResponseParser } from './parser'
-import { BoardSchema, FilterRule, ItemFromSchema, PageResult, QueryState, SelectionMap } from './types'
+import {
+  BoardSchema,
+  FilterRule,
+  ItemFromSchema,
+  PageResult,
+  QueryOptions,
+  QueryState,
+  SelectionMap,
+  WithGroup
+} from './types'
 
 /**
  * Chainable query builder for a Monday.com board
@@ -18,7 +27,11 @@ export class BoardQuery<TSchema extends BoardSchema> {
     filters: []
   }
 
-  constructor(private boardId: string, private client: MondayClient, private schema: TSchema) {}
+  constructor(
+    private boardId: string,
+    private client: MondayClient,
+    private schema: TSchema
+  ) {}
 
   /**
    * Filter: any_of - Match if column value is in the provided array
@@ -188,6 +201,14 @@ export class BoardQuery<TSchema extends BoardSchema> {
   }
 
   /**
+   * Filter items to one or more groups by group ID
+   */
+  inGroup(...groupIds: string[]): this {
+    this.state.groupIds = groupIds
+    return this
+  }
+
+  /**
    * Order results by column
    */
   orderBy<K extends keyof TSchema>(column: K, direction: 'asc' | 'desc' = 'desc'): this {
@@ -202,28 +223,27 @@ export class BoardQuery<TSchema extends BoardSchema> {
    * Execute query and return selected columns
    * Terminal operation - returns results
    */
-  async returning<TSelection extends SelectionMap<TSchema>>(
-    selection: TSelection
-  ): Promise<Array<ItemFromSchema<TSchema, TSelection>>> {
-    const query = GraphQLBuilder.buildQuery(this.boardId, this.schema, this.state, selection)
-
+  async returning<TSelection extends SelectionMap<TSchema>, TOptions extends QueryOptions = {}>(
+    selection: TSelection,
+    options?: TOptions
+  ): Promise<Array<WithGroup<ItemFromSchema<TSchema, TSelection>, TOptions>>> {
+    const query = GraphQLBuilder.buildQuery(this.boardId, this.schema, this.state, selection, options)
     const data = await this.client.run<Objects<'boards', Board>>(query)
-
-    const items = data.boards?.[0]?.items_page?.items || []
+    const items = this.extractItems(data)
     const parser = new ResponseParser(this.schema)
-
-    return parser.parseMany(items, selection) as Array<ItemFromSchema<TSchema, TSelection>>
+    return parser.parseMany(items, selection) as Array<WithGroup<ItemFromSchema<TSchema, TSelection>, TOptions>>
   }
 
   /**
    * Execute query and return first result or null
    * Terminal operation - returns single result
    */
-  async first<TSelection extends SelectionMap<TSchema>>(
-    selection: TSelection
-  ): Promise<ItemFromSchema<TSchema, TSelection> | null> {
+  async first<TSelection extends SelectionMap<TSchema>, TOptions extends QueryOptions = {}>(
+    selection: TSelection,
+    options?: TOptions
+  ): Promise<WithGroup<ItemFromSchema<TSchema, TSelection>, TOptions> | null> {
     this.state.limit = 1
-    const results = await this.returning(selection)
+    const results = await this.returning(selection, options)
     return results.length > 0 ? results[0] : null
   }
 
@@ -231,27 +251,29 @@ export class BoardQuery<TSchema extends BoardSchema> {
    * Execute query and return all results with pagination
    * Terminal operation - returns all results across pages
    */
-  async all<TSelection extends SelectionMap<TSchema>>(
+  async all<TSelection extends SelectionMap<TSchema>, TOptions extends QueryOptions = {}>(
     selection: TSelection,
-    maxPages: number = 10
-  ): Promise<Array<ItemFromSchema<TSchema, TSelection>>> {
-    const allItems: Array<ItemFromSchema<TSchema, TSelection>> = []
+    maxPages: number = 10,
+    options?: TOptions
+  ): Promise<Array<WithGroup<ItemFromSchema<TSchema, TSelection>, TOptions>>> {
+    const allItems: Array<WithGroup<ItemFromSchema<TSchema, TSelection>, TOptions>> = []
     let currentCursor: string | undefined = this.state.cursor
     let pageCount = 0
 
     while (pageCount < maxPages) {
       this.state.cursor = currentCursor
-      const query = GraphQLBuilder.buildQuery(this.boardId, this.schema, this.state, selection)
+      const query = GraphQLBuilder.buildQuery(this.boardId, this.schema, this.state, selection, options)
       const data = await this.client.run<Objects<'boards', Board>>(query)
 
-      const itemsPage = data.boards?.[0]?.items_page
+      const itemsPage = this.extractItemsPage(data)
       if (!itemsPage?.items || itemsPage.items.length === 0) break
 
       const parser = new ResponseParser(this.schema)
-      const parsed = parser.parseMany(itemsPage.items, selection) as Array<ItemFromSchema<TSchema, TSelection>>
+      const parsed = parser.parseMany(itemsPage.items, selection) as Array<
+        WithGroup<ItemFromSchema<TSchema, TSelection>, TOptions>
+      >
       allItems.push(...parsed)
 
-      // Check if there are more pages
       if (!itemsPage.cursor) break
       currentCursor = itemsPage.cursor
       pageCount++
@@ -264,17 +286,18 @@ export class BoardQuery<TSchema extends BoardSchema> {
    * Execute query and return a single page with pagination metadata
    * Terminal operation - returns page result with cursor
    */
-  async page<TSelection extends SelectionMap<TSchema>>(
-    selection: TSelection
-  ): Promise<PageResult<ItemFromSchema<TSchema, TSelection>>> {
-    const query = GraphQLBuilder.buildQuery(this.boardId, this.schema, this.state, selection)
+  async page<TSelection extends SelectionMap<TSchema>, TOptions extends QueryOptions = {}>(
+    selection: TSelection,
+    options?: TOptions
+  ): Promise<PageResult<WithGroup<ItemFromSchema<TSchema, TSelection>, TOptions>>> {
+    const query = GraphQLBuilder.buildQuery(this.boardId, this.schema, this.state, selection, options)
     const data = await this.client.run<Objects<'boards', Board>>(query)
-
-    const itemsPage = data.boards?.[0]?.items_page
+    const itemsPage = this.extractItemsPage(data)
     const items = itemsPage?.items || []
     const parser = new ResponseParser(this.schema)
-    const parsedItems = parser.parseMany(items, selection) as Array<ItemFromSchema<TSchema, TSelection>>
-
+    const parsedItems = parser.parseMany(items, selection) as Array<
+      WithGroup<ItemFromSchema<TSchema, TSelection>, TOptions>
+    >
     return {
       items: parsedItems,
       cursor: itemsPage?.cursor,
@@ -290,24 +313,22 @@ export class BoardQuery<TSchema extends BoardSchema> {
    * ```typescript
    * for await (const page of board.query().paginate({ email: true })) {
    *   console.log(`Processing ${page.items.length} items`)
-   *   // Process page.items
    *   if (!page.hasMore) break
    * }
    * ```
    */
-  async *paginate<TSelection extends SelectionMap<TSchema>>(
+  async *paginate<TSelection extends SelectionMap<TSchema>, TOptions extends QueryOptions = {}>(
     selection: TSelection,
-    maxPages: number = Infinity
-  ): AsyncGenerator<PageResult<ItemFromSchema<TSchema, TSelection>>, void, unknown> {
+    maxPages: number = Infinity,
+    options?: TOptions
+  ): AsyncGenerator<PageResult<WithGroup<ItemFromSchema<TSchema, TSelection>, TOptions>>, void, unknown> {
     let pageCount = 0
     let currentCursor: string | undefined = this.state.cursor
 
     while (pageCount < maxPages) {
       this.state.cursor = currentCursor
-      const pageResult = await this.page(selection)
-
+      const pageResult = await this.page(selection, options)
       yield pageResult
-
       if (!pageResult.hasMore) break
       currentCursor = pageResult.cursor
       pageCount++
@@ -318,10 +339,11 @@ export class BoardQuery<TSchema extends BoardSchema> {
    * Get item by ID
    * Terminal operation - returns single result
    */
-  async getById<TSelection extends SelectionMap<TSchema>>(
+  async getById<TSelection extends SelectionMap<TSchema>, TOptions extends QueryOptions = {}>(
     itemId: string,
-    selection: TSelection
-  ): Promise<ItemFromSchema<TSchema, TSelection> | null> {
+    selection: TSelection,
+    options?: TOptions
+  ): Promise<WithGroup<ItemFromSchema<TSchema, TSelection>, TOptions> | null> {
     const selectedKeys = Object.keys(selection).filter(k => selection[k])
     const columnIds = selectedKeys.map(key => this.schema[key].id)
     const columnFragments = GraphQLBuilder.buildColumnFragments(
@@ -329,11 +351,13 @@ export class BoardQuery<TSchema extends BoardSchema> {
       selectedKeys as (keyof TSchema)[],
       selection
     )
+    const groupField = options?.includeGroup ? 'group { id title position archived }' : ''
 
     const query = `{
       items(ids: ${itemId}) {
         id
         name
+        ${groupField}
         column_values(ids: ${columns(...columnIds)}) {
           id
           text
@@ -347,7 +371,33 @@ export class BoardQuery<TSchema extends BoardSchema> {
     if (!data.items || data.items.length === 0) return null
 
     const parser = new ResponseParser(this.schema)
-    return parser.parse(data.items[0], selection) as ItemFromSchema<TSchema, TSelection>
+    return parser.parse(data.items[0], selection) as WithGroup<ItemFromSchema<TSchema, TSelection>, TOptions>
+  }
+
+  /**
+   * Extract items_page from the API response, handling both board-level
+   * and group-level response shapes
+   */
+  private extractItemsPage(data: Objects<'boards', Board>): { cursor?: string; items: any[] } | undefined {
+    const board = data.boards?.[0]
+    if (!board) return undefined
+    if (this.state.groupIds && this.state.groupIds.length > 0) {
+      // Flatten items_page across all matched groups; use cursor from last group
+      // (pagination across multiple groups is not natively supported by the API —
+      // each group's items_page is independent, so we merge them into one page)
+      const groups = board.groups || []
+      const allItems = groups.flatMap(g => g.items_page?.items || [])
+      const cursor = groups.length > 0 ? groups[groups.length - 1].items_page?.cursor : undefined
+      return { cursor, items: allItems }
+    }
+    return board.items_page
+  }
+
+  /**
+   * Extract flat item array from response (used by returning())
+   */
+  private extractItems(data: Objects<'boards', Board>): any[] {
+    return this.extractItemsPage(data)?.items || []
   }
 
   /**
@@ -361,6 +411,6 @@ export class BoardQuery<TSchema extends BoardSchema> {
    * Format Date for Monday.com queries
    */
   private formatDate(date: Date): string {
-    return date.toISOString().split('T')[0] // YYYY-MM-DD
+    return date.toISOString().split('T')[0]
   }
 }

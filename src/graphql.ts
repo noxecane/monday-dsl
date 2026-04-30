@@ -16,7 +16,7 @@ import {
   tagColumn,
   urlColumn
 } from './fragments'
-import { BoardSchema, ColumnType, MutationOperation, QueryState, SelectionMap } from './types'
+import { BoardSchema, ColumnType, MutationOperation, QueryOptions, QueryState, SelectionMap } from './types'
 
 /**
  * Generate Monday.com GraphQL query from state
@@ -29,28 +29,47 @@ export class GraphQLBuilder {
     boardId: string,
     schema: TSchema,
     state: QueryState,
-    selection: SelectionMap<TSchema>
+    selection: SelectionMap<TSchema>,
+    options?: QueryOptions
   ): string {
     const selectedKeys = Object.keys(selection).filter(k => selection[k])
     const columnIds = selectedKeys.map(key => schema[key].id)
     const columnFragments = this.buildColumnFragments(schema, selectedKeys as (keyof TSchema)[], selection)
 
     const queryParams = this.buildQueryParams(state)
+    const groupField = options?.includeGroup ? 'group { id title position archived }' : ''
 
-    return `{
-      boards(ids: ${boardId}) {
-        items_page${queryParams} {
-          cursor
-          items {
+    const itemsBlock = `{
             id
             name
+            ${groupField}
             column_values(ids: ${columns(...columnIds)}) {
               id
               text
               value
               ${columnFragments}
             }
+          }`
+
+    if (state.groupIds && state.groupIds.length > 0) {
+      const groupIdList = state.groupIds.map(id => `"${id}"`).join(', ')
+      return `{
+      boards(ids: ${boardId}) {
+        groups(ids: [${groupIdList}]) {
+          items_page${queryParams} {
+            cursor
+            items ${itemsBlock}
           }
+        }
+      }
+    }`
+    }
+
+    return `{
+      boards(ids: ${boardId}) {
+        items_page${queryParams} {
+          cursor
+          items ${itemsBlock}
         }
       }
     }`

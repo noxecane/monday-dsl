@@ -5,6 +5,28 @@
  */
 
 /**
+ * Monday.com board group
+ */
+export interface MondayGroup {
+  id: string
+  title: string
+  position: string
+  archived: boolean
+}
+
+/**
+ * Options for terminal query methods
+ */
+export interface QueryOptions {
+  includeGroup?: boolean
+}
+
+/**
+ * Conditionally extend an item type with group info
+ */
+export type WithGroup<T, TOptions> = TOptions extends { includeGroup: true } ? T & { group: MondayGroup } : T
+
+/**
  * Monday.com status column value
  */
 export interface MondayStatus {
@@ -76,28 +98,28 @@ export type BoardSchema = Record<string, ColumnDefinition>
 export type InferColumnType<T extends ColumnType> = T extends 'text' | 'email' | 'phone'
   ? string
   : T extends 'number'
-  ? number
-  : T extends 'date' | 'time'
-  ? string
-  : T extends 'iso'
-  ? Date | null
-  : T extends 'status'
-  ? MondayStatus
-  : T extends 'dropdown'
-  ? string[]
-  : T extends 'people'
-  ? MondayPerson[]
-  : T extends 'url'
-  ? MondayUrl
-  : T extends 'connect'
-  ? string[]
-  : T extends 'asset'
-  ? MondayFile[]
-  : T extends 'tag'
-  ? string[]
-  : T extends 'mirror'
-  ? string
-  : unknown
+    ? number
+    : T extends 'date' | 'time'
+      ? string
+      : T extends 'iso'
+        ? Date | null
+        : T extends 'status'
+          ? MondayStatus
+          : T extends 'dropdown'
+            ? string[]
+            : T extends 'people'
+              ? MondayPerson[]
+              : T extends 'url'
+                ? MondayUrl
+                : T extends 'connect'
+                  ? string[]
+                  : T extends 'asset'
+                    ? MondayFile[]
+                    : T extends 'tag'
+                      ? string[]
+                      : T extends 'mirror'
+                        ? string
+                        : unknown
 
 /**
  * Infer TypeScript type from column definition
@@ -106,12 +128,12 @@ export type InferColumnType<T extends ColumnType> = T extends 'text' | 'email' |
 export type InferColumnDefinition<T extends ColumnDefinition, TSelection = true> = T['is_number'] extends true
   ? number
   : T extends { type: 'connect'; linked_schema: infer TLinked }
-  ? TSelection extends SelectionMap<any>
-    ? TLinked extends BoardSchema
-      ? Array<ItemFromSchema<TLinked, TSelection>> // Nested items with typed columns
-      : string[]
-    : string[] // Default to IDs when selection is boolean
-  : InferColumnType<T['type']>
+    ? TSelection extends SelectionMap<any>
+      ? TLinked extends BoardSchema
+        ? Array<ItemFromSchema<TLinked, TSelection>> // Nested items with typed columns
+        : string[]
+      : string[] // Default to IDs when selection is boolean
+    : InferColumnType<T['type']>
 
 /**
  * Extract selected columns from schema
@@ -171,6 +193,7 @@ export interface QueryState {
     direction: 'asc' | 'desc'
   }
   operator?: 'and' | 'or'
+  groupIds?: string[]
 }
 
 /**
@@ -202,24 +225,24 @@ export interface PageResult<T> {
 export type ColumnValueInput<T extends ColumnType> = T extends 'text' | 'email' | 'phone'
   ? string
   : T extends 'number'
-  ? number
-  : T extends 'date' | 'time'
-  ? Date | string
-  : T extends 'status'
-  ? string // Label text
-  : T extends 'dropdown'
-  ? string[] | string
-  : T extends 'people'
-  ? string[] | string // Person IDs
-  : T extends 'url'
-  ? { url: string; text: string } | string
-  : T extends 'connect'
-  ? string[] | string // Item IDs
-  : T extends 'asset'
-  ? never // Files handled separately via upload API
-  : T extends 'tag'
-  ? string[] | string
-  : string
+    ? number
+    : T extends 'date' | 'time'
+      ? Date | string
+      : T extends 'status'
+        ? string // Label text
+        : T extends 'dropdown'
+          ? string[] | string
+          : T extends 'people'
+            ? string[] | string // Person IDs
+            : T extends 'url'
+              ? { url: string; text: string } | string
+              : T extends 'connect'
+                ? string[] | string // Item IDs
+                : T extends 'asset'
+                  ? never // Files handled separately via upload API
+                  : T extends 'tag'
+                    ? string[] | string
+                    : string
 
 /**
  * Create item input - partial schema with values

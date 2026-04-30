@@ -25,6 +25,10 @@ export class ResponseParser<TSchema extends BoardSchema> {
       name: rawItem.name
     }
 
+    if (rawItem.group) {
+      result.group = rawItem.group
+    }
+
     if (!rawItem.column_values) {
       return result
     }

@@ -4,7 +4,7 @@
  * Provides admin operations for managing boards, webhooks, columns, and users
  */
 
-import { MondayClient } from './client'
+import { Group, MondayClient } from './client'
 
 /**
  * Convert object to GraphQL argument string
@@ -122,14 +122,6 @@ export interface User {
 }
 
 /**
- * Board group structure
- */
-export interface Group {
-  id: string
-  title: string
-}
-
-/**
  * Board folder structure
  */
 export interface Folder {
@@ -225,6 +217,8 @@ export class BoardAdmin {
         groups {
           id
           title
+          position
+          archived
         }
       }
     }`)
@@ -301,10 +295,13 @@ export class BoardAdmin {
   async createColumn(boardId: string, columnId: string, title: string, config: ColumnConfig): Promise<Column> {
     let settings: any = null
     if (config.type === 'status' && config.labels) {
-      const labelMap = config.labels.reduce((acc, label, index) => {
-        acc[index] = label
-        return acc
-      }, {} as Record<number, string>)
+      const labelMap = config.labels.reduce(
+        (acc, label, index) => {
+          acc[index] = label
+          return acc
+        },
+        {} as Record<number, string>
+      )
       settings = { labels: labelMap }
     }
 

@@ -5,13 +5,13 @@ import { BoardSchema, MutationOperation, QueryState } from '../src/types'
 const n = (s: string) => s.replace(/\s+/g, ' ').trim()
 
 const schema: BoardSchema = {
-  email:  { id: 'email__1',  type: 'email' },
+  email: { id: 'email__1', type: 'email' },
   status: { id: 'status__1', type: 'status' },
-  note:   { id: 'text__1',   type: 'text' },
-  score:  { id: 'num__1',    type: 'number' },
-  date:   { id: 'date__1',   type: 'date' },
+  note: { id: 'text__1', type: 'text' },
+  score: { id: 'num__1', type: 'number' },
+  date: { id: 'date__1', type: 'date' },
   people: { id: 'people__1', type: 'people' },
-  link:   { id: 'url__1',    type: 'url' },
+  link: { id: 'url__1', type: 'url' }
 }
 
 const BOARD_ID = '12345'
@@ -68,88 +68,157 @@ describe('GraphQLBuilder.buildQuery', () => {
   })
 
   it('generates an any_of filter rule', () => {
-    const q = n(GraphQLBuilder.buildQuery(BOARD_ID, schema,
-      state({ filters: [{ column_id: 'email__1', operator: 'any_of', compare_value: ['a@b.com'] }] }),
-      { email: true }
-    ))
+    const q = n(
+      GraphQLBuilder.buildQuery(
+        BOARD_ID,
+        schema,
+        state({ filters: [{ column_id: 'email__1', operator: 'any_of', compare_value: ['a@b.com'] }] }),
+        { email: true }
+      )
+    )
     expect(q).toBe(
       '{ boards(ids: 12345) { items_page(query_params: { rules: [{column_id: "email__1", compare_value: ["a@b.com"], operator: any_of}] }) { cursor items { id name column_values(ids: ["email__1"]) { id text value } } } } }'
     )
   })
 
   it('generates a contains_terms filter rule', () => {
-    const q = n(GraphQLBuilder.buildQuery(BOARD_ID, schema,
-      state({ filters: [{ column_id: 'text__1', operator: 'contains_terms', compare_value: 'hello' }] }),
-      { note: true }
-    ))
+    const q = n(
+      GraphQLBuilder.buildQuery(
+        BOARD_ID,
+        schema,
+        state({ filters: [{ column_id: 'text__1', operator: 'contains_terms', compare_value: 'hello' }] }),
+        { note: true }
+      )
+    )
     expect(q).toBe(
       '{ boards(ids: 12345) { items_page(query_params: { rules: [{column_id: "text__1", compare_value: "hello", operator: contains_terms}] }) { cursor items { id name column_values(ids: ["text__1"]) { id text value } } } } }'
     )
   })
 
   it('generates a between filter rule with array compare_value', () => {
-    const q = n(GraphQLBuilder.buildQuery(BOARD_ID, schema,
-      state({ filters: [{ column_id: 'num__1', operator: 'between', compare_value: ['10', '20'] }] }),
-      { score: true }
-    ))
+    const q = n(
+      GraphQLBuilder.buildQuery(
+        BOARD_ID,
+        schema,
+        state({ filters: [{ column_id: 'num__1', operator: 'between', compare_value: ['10', '20'] }] }),
+        { score: true }
+      )
+    )
     expect(q).toBe(
       '{ boards(ids: 12345) { items_page(query_params: { rules: [{column_id: "num__1", compare_value: ["10", "20"], operator: between}] }) { cursor items { id name column_values(ids: ["num__1"]) { id text value } } } } }'
     )
   })
 
   it('generates a date filter with compare_attribute and date fragment', () => {
-    const q = n(GraphQLBuilder.buildQuery(BOARD_ID, schema,
-      state({ filters: [{ column_id: 'date__1', operator: 'greater_than', compare_value: '2024-01-01', compare_attribute: 'DATE' }] }),
-      { date: true }
-    ))
+    const q = n(
+      GraphQLBuilder.buildQuery(
+        BOARD_ID,
+        schema,
+        state({
+          filters: [
+            { column_id: 'date__1', operator: 'greater_than', compare_value: '2024-01-01', compare_attribute: 'DATE' }
+          ]
+        }),
+        { date: true }
+      )
+    )
     expect(q).toBe(
       '{ boards(ids: 12345) { items_page(query_params: { rules: [{column_id: "date__1", compare_value: "2024-01-01", operator: greater_than, compare_attribute: "DATE"}] }) { cursor items { id name column_values(ids: ["date__1"]) { id text value ... on DateValue { date } } } } } }'
     )
   })
 
   it('generates an order_by param', () => {
-    const q = n(GraphQLBuilder.buildQuery(BOARD_ID, schema,
-      state({ orderBy: { column_id: 'num__1', direction: 'asc' } }),
-      { score: true }
-    ))
+    const q = n(
+      GraphQLBuilder.buildQuery(BOARD_ID, schema, state({ orderBy: { column_id: 'num__1', direction: 'asc' } }), {
+        score: true
+      })
+    )
     expect(q).toBe(
       '{ boards(ids: 12345) { items_page(query_params: { order_by: { column_id: "num__1", direction: asc } }) { cursor items { id name column_values(ids: ["num__1"]) { id text value } } } } }'
     )
   })
 
   it('combines multiple filter rules with an or operator', () => {
-    const q = n(GraphQLBuilder.buildQuery(BOARD_ID, schema,
-      state({
-        operator: 'or',
-        filters: [
-          { column_id: 'email__1', operator: 'any_of', compare_value: ['a@b.com'] },
-          { column_id: 'text__1', operator: 'contains_terms', compare_value: 'hello' }
-        ]
-      }),
-      { email: true, note: true }
-    ))
+    const q = n(
+      GraphQLBuilder.buildQuery(
+        BOARD_ID,
+        schema,
+        state({
+          operator: 'or',
+          filters: [
+            { column_id: 'email__1', operator: 'any_of', compare_value: ['a@b.com'] },
+            { column_id: 'text__1', operator: 'contains_terms', compare_value: 'hello' }
+          ]
+        }),
+        { email: true, note: true }
+      )
+    )
     expect(q).toBe(
       '{ boards(ids: 12345) { items_page(query_params: { rules: [{column_id: "email__1", compare_value: ["a@b.com"], operator: any_of}, {column_id: "text__1", compare_value: "hello", operator: contains_terms}], operator: or }) { cursor items { id name column_values(ids: ["email__1","text__1"]) { id text value } } } } }'
     )
   })
 
   it('escapes double quotes in compare values', () => {
-    const q = n(GraphQLBuilder.buildQuery(BOARD_ID, schema,
-      state({ filters: [{ column_id: 'text__1', operator: 'any_of', compare_value: ['say "hi"'] }] }),
-      { note: true }
-    ))
+    const q = n(
+      GraphQLBuilder.buildQuery(
+        BOARD_ID,
+        schema,
+        state({ filters: [{ column_id: 'text__1', operator: 'any_of', compare_value: ['say "hi"'] }] }),
+        { note: true }
+      )
+    )
     expect(q).toBe(
       '{ boards(ids: 12345) { items_page(query_params: { rules: [{column_id: "text__1", compare_value: ["say \\"hi\\""], operator: any_of}] }) { cursor items { id name column_values(ids: ["text__1"]) { id text value } } } } }'
     )
   })
 
   it('escapes newlines in compare values', () => {
-    const q = n(GraphQLBuilder.buildQuery(BOARD_ID, schema,
-      state({ filters: [{ column_id: 'text__1', operator: 'any_of', compare_value: ['line1\nline2'] }] }),
-      { note: true }
-    ))
+    const q = n(
+      GraphQLBuilder.buildQuery(
+        BOARD_ID,
+        schema,
+        state({ filters: [{ column_id: 'text__1', operator: 'any_of', compare_value: ['line1\nline2'] }] }),
+        { note: true }
+      )
+    )
     expect(q).toBe(
       '{ boards(ids: 12345) { items_page(query_params: { rules: [{column_id: "text__1", compare_value: ["line1\\nline2"], operator: any_of}] }) { cursor items { id name column_values(ids: ["text__1"]) { id text value } } } } }'
+    )
+  })
+
+  it('scopes query to a single group when groupIds is set', () => {
+    const q = n(GraphQLBuilder.buildQuery(BOARD_ID, schema, state({ groupIds: ['grp1'] }), { email: true }))
+    expect(q).toBe(
+      '{ boards(ids: 12345) { groups(ids: ["grp1"]) { items_page { cursor items { id name column_values(ids: ["email__1"]) { id text value } } } } } }'
+    )
+  })
+
+  it('scopes query to multiple groups when groupIds has more than one entry', () => {
+    const q = n(GraphQLBuilder.buildQuery(BOARD_ID, schema, state({ groupIds: ['grp1', 'grp2'] }), { email: true }))
+    expect(q).toBe(
+      '{ boards(ids: 12345) { groups(ids: ["grp1", "grp2"]) { items_page { cursor items { id name column_values(ids: ["email__1"]) { id text value } } } } } }'
+    )
+  })
+
+  it('includes group fields in items when includeGroup option is set', () => {
+    const q = n(GraphQLBuilder.buildQuery(BOARD_ID, schema, state(), { email: true }, { includeGroup: true }))
+    expect(q).toBe(
+      '{ boards(ids: 12345) { items_page { cursor items { id name group { id title position archived } column_values(ids: ["email__1"]) { id text value } } } } }'
+    )
+  })
+
+  it('combines groupIds and includeGroup', () => {
+    const q = n(
+      GraphQLBuilder.buildQuery(
+        BOARD_ID,
+        schema,
+        state({ groupIds: ['grp1'] }),
+        { email: true },
+        { includeGroup: true }
+      )
+    )
+    expect(q).toBe(
+      '{ boards(ids: 12345) { groups(ids: ["grp1"]) { items_page { cursor items { id name group { id title position archived } column_values(ids: ["email__1"]) { id text value } } } } } }'
     )
   })
 })
@@ -192,7 +261,9 @@ describe('GraphQLBuilder.getFragmentForType', () => {
   })
 
   it('people → PeopleValue fragment', () => {
-    expect(n(GraphQLBuilder.getFragmentForType('people'))).toBe('... on PeopleValue { text persons_and_teams { id kind } }')
+    expect(n(GraphQLBuilder.getFragmentForType('people'))).toBe(
+      '... on PeopleValue { text persons_and_teams { id kind } }'
+    )
   })
 
   it('url → LinkValue fragment', () => {
@@ -206,11 +277,15 @@ describe('GraphQLBuilder.getFragmentForType', () => {
   it('connect with linked schema and selection → expanded linked_items fragment', () => {
     const linkedSchema: BoardSchema = { title: { id: 'text__1', type: 'text' } }
     const frag = n(GraphQLBuilder.getFragmentForType('connect', linkedSchema, { title: true }))
-    expect(frag).toBe('... on BoardRelationValue { linked_items { id name column_values(ids: ["text__1"]) { id text value } } }')
+    expect(frag).toBe(
+      '... on BoardRelationValue { linked_items { id name column_values(ids: ["text__1"]) { id text value } } }'
+    )
   })
 
   it('asset → FileValue fragment', () => {
-    expect(n(GraphQLBuilder.getFragmentForType('asset'))).toBe('... on FileValue { files { ... on FileAssetValue { name asset { public_url } } } }')
+    expect(n(GraphQLBuilder.getFragmentForType('asset'))).toBe(
+      '... on FileValue { files { ... on FileAssetValue { name asset { public_url } } } }'
+    )
   })
 
   it('tag → TagsValue fragment', () => {
@@ -240,14 +315,20 @@ describe('GraphQLBuilder.buildColumnFragments', () => {
   it('deduplicates fragments when two columns share the same type', () => {
     const twoStatusSchema: BoardSchema = {
       s1: { id: 's1__1', type: 'status' },
-      s2: { id: 's2__1', type: 'status' },
+      s2: { id: 's2__1', type: 'status' }
     }
     const frag = n(GraphQLBuilder.buildColumnFragments(twoStatusSchema, ['s1', 's2'], { s1: true, s2: true }))
     expect(frag).toBe('... on StatusValue { label updated_at }')
   })
 
   it('returns one fragment per distinct type for mixed selection', () => {
-    const frag = n(GraphQLBuilder.buildColumnFragments(schema, ['status', 'people', 'link'], { status: true, people: true, link: true }))
+    const frag = n(
+      GraphQLBuilder.buildColumnFragments(schema, ['status', 'people', 'link'], {
+        status: true,
+        people: true,
+        link: true
+      })
+    )
     expect(frag).toBe(
       '... on StatusValue { label updated_at } ... on PeopleValue { text persons_and_teams { id kind } } ... on LinkValue { url url_text }'
     )
@@ -268,7 +349,9 @@ describe('GraphQLBuilder.buildMutation', () => {
   })
 
   it('serializes column values as escaped JSON in create', () => {
-    const ops: MutationOperation[] = [{ op: 'create', alias: 'op0', name: 'Item', columnValues: { email__1: 'x@y.com' } }]
+    const ops: MutationOperation[] = [
+      { op: 'create', alias: 'op0', name: 'Item', columnValues: { email__1: 'x@y.com' } }
+    ]
     const q = n(GraphQLBuilder.buildMutation(BOARD_ID, schema, ops))
     expect(q).toBe(
       'mutation { op0: create_item(board_id: 12345, item_name: "Item", column_values: "{\\"email__1\\":\\"x@y.com\\"}") { id name } }'

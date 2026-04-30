@@ -71,6 +71,21 @@ export interface Board {
     cursor?: string
     items: RawItem[]
   }
+  groups?: Array<{
+    id?: string
+    title?: string
+    items_page?: { cursor?: string; items: RawItem[] }
+  }>
+}
+
+/**
+ * Board group structure
+ */
+export interface Group {
+  id: string
+  title: string
+  position: string
+  archived: boolean
 }
 
 /**
@@ -81,6 +96,7 @@ export interface RawItem {
   name?: string
   created_at?: string
   column_values?: ColumnValue[]
+  group?: Group
 }
 
 /**
@@ -99,7 +115,10 @@ export interface ColumnValue {
  * TODO: rewrite the monday client to use HTTP agent. Also use that chance to review error handling.
  */
 export class MondayFetchClient implements MondayClient {
-  constructor(private readonly url: string, private readonly token: string) {}
+  constructor(
+    private readonly url: string,
+    private readonly token: string
+  ) {}
 
   /**
    * Upload a file to Monday.com item column

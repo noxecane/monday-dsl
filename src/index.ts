@@ -29,7 +29,7 @@ export { ResponseParser } from './parser'
 export { BoardQuery } from './query'
 
 // Client interface
-export { MondayFetchClient } from './client'
+export { Group, MondayFetchClient } from './client'
 export type { MondayClient } from './client'
 
 // Error classes
@@ -48,30 +48,32 @@ export {
 export type {
   BoardSchema,
   ColumnDefinition,
+  ColumnType,
   FilterOperator,
   FilterRule,
   InferColumnDefinition,
   InferColumnType,
   ItemFromSchema,
   MondayFile,
+  MondayGroup,
   MondayPerson,
   MondayStatus,
   PageResult,
-  ColumnType,
+  QueryOptions,
   QueryState,
   SelectedColumns,
-  SelectionMap
+  SelectionMap,
+  WithGroup
 } from './types'
 
 // Admin types
 export type {
   Column,
   ColumnConfig,
-  ColumnType as CreateColumnType,
   ColumnValueEventConfig,
+  ColumnType as CreateColumnType,
   EventConfig,
   Folder,
-  Group,
   GroupItemEventConfig,
   SimpleEventConfig,
   StatusColumnEventConfig,

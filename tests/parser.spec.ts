@@ -6,17 +6,19 @@ import { BoardSchema } from '../src/types'
 // ──────────────────────────────────────────────────────────────
 
 describe('ResponseParser.parseNumber', () => {
-  it('parses a float string',       () => expect(ResponseParser.parseNumber('3.14')).toBe(3.14))
-  it('parses an integer string',    () => expect(ResponseParser.parseNumber('42')).toBe(42))
-  it('returns 0 for empty string',  () => expect(ResponseParser.parseNumber('')).toBe(0))
-  it('returns 0 for null',          () => expect(ResponseParser.parseNumber(null)).toBe(0))
-  it('returns 0 for undefined',     () => expect(ResponseParser.parseNumber(undefined)).toBe(0))
-  it('returns 0 for non-numeric',   () => expect(ResponseParser.parseNumber('abc')).toBe(0))
+  it('parses a float string', () => expect(ResponseParser.parseNumber('3.14')).toBe(3.14))
+  it('parses an integer string', () => expect(ResponseParser.parseNumber('42')).toBe(42))
+  it('returns 0 for empty string', () => expect(ResponseParser.parseNumber('')).toBe(0))
+  it('returns 0 for null', () => expect(ResponseParser.parseNumber(null)).toBe(0))
+  it('returns 0 for undefined', () => expect(ResponseParser.parseNumber(undefined)).toBe(0))
+  it('returns 0 for non-numeric', () => expect(ResponseParser.parseNumber('abc')).toBe(0))
 })
 
 describe('ResponseParser.parseDateString', () => {
   it('returns the date field', () => {
-    expect(ResponseParser.parseDateString({ id: 'd', text: '', value: null, date: '2024-01-01' } as any)).toBe('2024-01-01')
+    expect(ResponseParser.parseDateString({ id: 'd', text: '', value: null, date: '2024-01-01' } as any)).toBe(
+      '2024-01-01'
+    )
   })
 
   it('returns empty string when date field is missing', () => {
@@ -55,15 +57,21 @@ describe('ResponseParser.parseDate', () => {
 
 describe('ResponseParser.parseStatus', () => {
   it('handles a string label', () => {
-    expect(ResponseParser.parseStatus({ id: 's', text: '', value: null, label: 'Done' } as any)).toEqual({ label: 'Done' })
+    expect(ResponseParser.parseStatus({ id: 's', text: '', value: null, label: 'Done' } as any)).toEqual({
+      label: 'Done'
+    })
   })
 
   it('handles an object label with text and index', () => {
-    expect(ResponseParser.parseStatus({ id: 's', text: '', value: null, label: { text: 'In Progress', index: 2 } } as any)).toEqual({ label: 'In Progress', index: 2 })
+    expect(
+      ResponseParser.parseStatus({ id: 's', text: '', value: null, label: { text: 'In Progress', index: 2 } } as any)
+    ).toEqual({ label: 'In Progress', index: 2 })
   })
 
   it('handles an object label with label property and index', () => {
-    expect(ResponseParser.parseStatus({ id: 's', text: '', value: null, label: { label: 'Done', index: 1 } } as any)).toEqual({ label: 'Done', index: 1 })
+    expect(
+      ResponseParser.parseStatus({ id: 's', text: '', value: null, label: { label: 'Done', index: 1 } } as any)
+    ).toEqual({ label: 'Done', index: 1 })
   })
 
   it('returns null when label is missing', () => {
@@ -88,8 +96,19 @@ describe('ResponseParser.parseDropdown', () => {
 
 describe('ResponseParser.parsePeople', () => {
   it('parses a persons_and_teams array', () => {
-    const val = { id: 'p', text: '', value: null, persons_and_teams: [{ id: '1', kind: 'person' }, { id: '2', kind: 'team' }] } as any
-    expect(ResponseParser.parsePeople(val)).toEqual([{ id: '1', kind: 'person' }, { id: '2', kind: 'team' }])
+    const val = {
+      id: 'p',
+      text: '',
+      value: null,
+      persons_and_teams: [
+        { id: '1', kind: 'person' },
+        { id: '2', kind: 'team' }
+      ]
+    } as any
+    expect(ResponseParser.parsePeople(val)).toEqual([
+      { id: '1', kind: 'person' },
+      { id: '2', kind: 'team' }
+    ])
   })
 
   it('returns empty array when field is missing', () => {
@@ -126,7 +145,9 @@ describe('ResponseParser.parseConnect', () => {
   it('parses linked_items with a nested schema in expanded mode', () => {
     const linkedSchema: BoardSchema = { title: { id: 'text__1', type: 'text' } }
     const val = {
-      id: 'c', text: '', value: null,
+      id: 'c',
+      text: '',
+      value: null,
       linked_items: [{ id: '10', name: 'Item A', column_values: [{ id: 'text__1', text: 'Hello', value: null }] }]
     } as any
     const result = ResponseParser.parseConnect(val, linkedSchema, { title: true }) as any[]
@@ -136,7 +157,12 @@ describe('ResponseParser.parseConnect', () => {
 
 describe('ResponseParser.parseAsset', () => {
   it('parses a files array with public_url', () => {
-    const val = { id: 'a', text: '', value: null, files: [{ name: 'doc.pdf', asset: { public_url: 'https://cdn.example.com/doc.pdf' } }] } as any
+    const val = {
+      id: 'a',
+      text: '',
+      value: null,
+      files: [{ name: 'doc.pdf', asset: { public_url: 'https://cdn.example.com/doc.pdf' } }]
+    } as any
     expect(ResponseParser.parseAsset(val)).toEqual([{ name: 'doc.pdf', url: 'https://cdn.example.com/doc.pdf' }])
   })
 
@@ -183,9 +209,9 @@ describe('ResponseParser.parseMirrorValue', () => {
 // ──────────────────────────────────────────────────────────────
 
 const schema: BoardSchema = {
-  email:  { id: 'email__1',  type: 'email' },
+  email: { id: 'email__1', type: 'email' },
   status: { id: 'status__1', type: 'status' },
-  score:  { id: 'num__1',    type: 'number' },
+  score: { id: 'num__1', type: 'number' }
 }
 
 function makeItem(columnValues: any[], id = '1', name = 'Test Item') {
@@ -237,6 +263,18 @@ describe('ResponseParser.parse', () => {
     const result = parser.parse(makeItem([]), { email: true }) as any
     expect(result.email).toBeUndefined()
   })
+
+  it('includes group when present on raw item', () => {
+    const group = { id: 'grp1', title: 'Active', position: '1', archived: false }
+    const item = { ...makeItem([{ id: 'email__1', text: 'x@y.com', value: null }]), group }
+    const result = parser.parse(item, { email: true }) as any
+    expect(result.group).toEqual(group)
+  })
+
+  it('omits group when not present on raw item', () => {
+    const result = parser.parse(makeItem([{ id: 'email__1', text: 'x@y.com', value: null }]), { email: true }) as any
+    expect(result.group).toBeUndefined()
+  })
 })
 
 describe('ResponseParser.parseMany', () => {
@@ -245,7 +283,7 @@ describe('ResponseParser.parseMany', () => {
   it('returns parsed objects for each item', () => {
     const items = [
       makeItem([{ id: 'email__1', text: 'a@b.com', value: null }], '1', 'First'),
-      makeItem([{ id: 'email__1', text: 'c@d.com', value: null }], '2', 'Second'),
+      makeItem([{ id: 'email__1', text: 'c@d.com', value: null }], '2', 'Second')
     ]
     const results = parser.parseMany(items, { email: true }) as any[]
     expect(results).toEqual([
