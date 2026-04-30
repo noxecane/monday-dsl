@@ -5,6 +5,7 @@
  */
 
 import { Group, MondayClient } from './client'
+import { BoardQueryBuilder, FolderQueryBuilder, WebhookQueryBuilder } from './meta/index'
 
 /**
  * Convert object to GraphQL argument string
@@ -191,6 +192,18 @@ export class BoardAdmin {
    * @param client - Monday.com GraphQL client for API communication
    */
   constructor(private client: MondayClient) {}
+
+  board(boardId: string): BoardQueryBuilder {
+    return new BoardQueryBuilder(boardId, this.client)
+  }
+
+  folder(folderId: string): FolderQueryBuilder {
+    return new FolderQueryBuilder(folderId, this.client)
+  }
+
+  webhooks(boardId: string): WebhookQueryBuilder {
+    return new WebhookQueryBuilder(boardId, this.client)
+  }
 
   /**
    * Get board name by ID

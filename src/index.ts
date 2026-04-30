@@ -66,6 +66,10 @@ export type {
   WithGroup
 } from './types'
 
+// Metadata query builders
+export { BoardQueryBuilder, FolderQueryBuilder, WebhookQueryBuilder } from './meta/index'
+export type { Board, FolderRef, FolderScalars, Webhook, WebhookConfig } from './meta/index'
+
 // Admin types
 export type {
   Column,
@@ -78,7 +82,6 @@ export type {
   SimpleEventConfig,
   StatusColumnEventConfig,
   User,
-  Webhook,
   WebhookEvent
 } from './admin'
 
