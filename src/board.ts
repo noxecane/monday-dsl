@@ -7,7 +7,7 @@
 import { MondayClient } from './client'
 import { BoardMutation } from './mutation'
 import { BoardQuery } from './query'
-import { BoardSchema, ItemFromSchema, SelectionMap } from './types'
+import { BoardSchema, ItemFromSchema, QueryOptions, SelectionMap, WithGroup } from './types'
 
 /**
  * Monday.com Board - Typed interface to a Monday board
@@ -69,11 +69,12 @@ export class MondayBoard<TSchema extends BoardSchema> {
    * @returns Item with selected columns, or null if not found
    * @throws {Error} If no board ID is available
    */
-  async getById<TSelection extends SelectionMap<TSchema>>(
+  async getById<TSelection extends SelectionMap<TSchema>, TOptions extends QueryOptions = {}>(
     itemId: string,
-    selection: TSelection
-  ): Promise<ItemFromSchema<TSchema, TSelection> | null> {
-    return this.query().getById(itemId, selection)
+    selection: TSelection,
+    options?: TOptions
+  ): Promise<WithGroup<ItemFromSchema<TSchema, TSelection>, TOptions> | null> {
+    return this.query().getById(itemId, selection, options)
   }
 
   /**
@@ -91,12 +92,12 @@ export class MondayBoard<TSchema extends BoardSchema> {
    * )
    * ```
    */
-  async findOne<TSelection extends SelectionMap<TSchema>>(
+  async findOne<TSelection extends SelectionMap<TSchema>, TOptions extends QueryOptions = {}>(
     finder: (query: BoardQuery<TSchema>) => BoardQuery<TSchema>,
-    selection: TSelection
-  ): Promise<ItemFromSchema<TSchema, TSelection> | null> {
-    const query = finder(this.query())
-    return query.first(selection)
+    selection: TSelection,
+    options?: TOptions
+  ): Promise<WithGroup<ItemFromSchema<TSchema, TSelection>, TOptions> | null> {
+    return finder(this.query()).first(selection, options)
   }
 
   /**
@@ -114,11 +115,11 @@ export class MondayBoard<TSchema extends BoardSchema> {
    * )
    * ```
    */
-  async findMany<TSelection extends SelectionMap<TSchema>>(
+  async findMany<TSelection extends SelectionMap<TSchema>, TOptions extends QueryOptions = {}>(
     finder: (query: BoardQuery<TSchema>) => BoardQuery<TSchema>,
-    selection: TSelection
-  ): Promise<Array<ItemFromSchema<TSchema, TSelection>>> {
-    const query = finder(this.query())
-    return query.returning(selection)
+    selection: TSelection,
+    options?: TOptions
+  ): Promise<Array<WithGroup<ItemFromSchema<TSchema, TSelection>, TOptions>>> {
+    return finder(this.query()).returning(selection, options)
   }
 }
