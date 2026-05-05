@@ -93,6 +93,7 @@ export {
   onColumnChange,
   onCreate,
   onStatusChange,
+  StatusUpdate,
   UpdateColumnValuePayload,
   WebhookPayload
 } from './tracking'
