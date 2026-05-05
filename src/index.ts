@@ -88,12 +88,32 @@ export type {
 // Tracking system
 export {
   BoardTracker,
-  CreateItemPayload,
-  ItemPayload,
   onColumnChange,
   onCreate,
   onStatusChange,
-  StatusUpdate,
+  // payload types
+  WebhookPayload,
+  ItemPayload,
+  ItemPayloadEvent,
+  CreateItemPayload,
+  ItemArchivedPayload,
+  ItemDeletedPayload,
+  ItemRestoredPayload,
+  ItemMovedToGroupPayload,
+  ItemNameChangedPayload,
   UpdateColumnValuePayload,
-  WebhookPayload
+  CreateSubitemPayload,
+  CreateUpdatePayload,
+  EditUpdatePayload,
+  DeleteUpdatePayload,
+  CreateColumnPayload,
+  // column value shapes
+  StatusUpdate,
+  DateUpdate,
+  PersonUpdate,
+  PeopleUpdate,
+  DropdownUpdate,
+  ConnectUpdate,
+  TextUpdate,
+  NumberUpdate
 } from './tracking'
