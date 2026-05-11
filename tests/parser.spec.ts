@@ -218,6 +218,35 @@ function makeItem(columnValues: any[], id = '1', name = 'Test Item') {
   return { id, name, column_values: columnValues }
 }
 
+describe('ResponseParser.parse — is_mirror', () => {
+  it('uses display_value when is_mirror: true on a text column', () => {
+    const mirrorSchema: BoardSchema = {
+      mirrored: { id: 'mirror__1', type: 'text', is_mirror: true }
+    }
+    const parser = new ResponseParser(mirrorSchema)
+    const item = makeItem([{ id: 'mirror__1', text: 'raw', value: null, display_value: 'Mirrored Text' }])
+    const result = parser.parse(item, { mirrored: true }) as any
+    expect(result.mirrored).toBe('Mirrored Text')
+  })
+
+  it('uses display_value as number when is_mirror: true and is_number: true', () => {
+    const mirrorSchema: BoardSchema = {
+      mirrored_score: { id: 'mirror__1', type: 'text', is_mirror: true, is_number: true }
+    }
+    const parser = new ResponseParser(mirrorSchema)
+    const item = makeItem([{ id: 'mirror__1', text: '', value: null, display_value: '42.5' }])
+    const result = parser.parse(item, { mirrored_score: true }) as any
+    expect(result.mirrored_score).toBe(42.5)
+  })
+
+  it('throws ValidationError when column has type: mirror', () => {
+    const mirrorSchema: BoardSchema = { bad: { id: 'bad__1', type: 'mirror' } }
+    const parser = new ResponseParser(mirrorSchema)
+    const item = makeItem([{ id: 'bad__1', text: 'x', value: null }])
+    expect(() => parser.parse(item, { bad: true })).toThrow('Column type "mirror" is not supported')
+  })
+})
+
 describe('ResponseParser.parse', () => {
   const parser = new ResponseParser(schema)
 

@@ -16,6 +16,7 @@ import {
   tagColumn,
   urlColumn
 } from './fragments'
+import { ValidationError } from './errors'
 import { BoardSchema, ColumnType, MutationOperation, QueryOptions, QueryState, SelectionMap } from './types'
 
 /**
@@ -148,7 +149,11 @@ export class GraphQLBuilder {
       const colDef = schema[key]
       const selectionValue = selection[key]
 
-      // Check if this is a nested selection for connect column
+      if (colDef.is_mirror) {
+        fragments.add(mirrorColumn())
+        continue
+      }
+
       const nestedSelection =
         colDef.type === 'connect' && typeof selectionValue === 'object' && !Array.isArray(selectionValue)
           ? selectionValue
@@ -198,8 +203,11 @@ export class GraphQLBuilder {
       case 'tag':
         return tagColumn()
       case 'mirror':
-        // TODO: handle mirrorColumn fragment. see usage of mirrorColumn for examples
-        return mirrorColumn()
+        throw new ValidationError(
+          'Column type "mirror" is not supported. Use is_mirror: true on the column definition instead.',
+          'type',
+          'mirror'
+        )
       default:
         return '' // text, number, email, phone use text field
     }

@@ -292,10 +292,11 @@ describe('GraphQLBuilder.getFragmentForType', () => {
     expect(n(GraphQLBuilder.getFragmentForType('tag'))).toBe('... on TagsValue { tag_ids text }')
   })
 
-  it('mirror → MirrorValue fragment', () => {
-    expect(n(GraphQLBuilder.getFragmentForType('mirror'))).toBe('... on MirrorValue { display_value }')
+  it('mirror → throws ValidationError', () => {
+    expect(() => GraphQLBuilder.getFragmentForType('mirror')).toThrow('Column type "mirror" is not supported')
   })
 })
+
 
 // ──────────────────────────────────────────────────────────────
 // buildColumnFragments
@@ -305,6 +306,30 @@ describe('GraphQLBuilder.buildColumnFragments', () => {
   it('returns empty string for text-only selection', () => {
     const frag = GraphQLBuilder.buildColumnFragments(schema, ['email', 'note'], { email: true, note: true })
     expect(frag.trim()).toBe('')
+  })
+
+  it('emits MirrorValue fragment for a column with is_mirror: true', () => {
+    const mirrorSchema: BoardSchema = {
+      mirrored_status: { id: 'mirror__1', type: 'text', is_mirror: true }
+    }
+    const frag = n(GraphQLBuilder.buildColumnFragments(mirrorSchema, ['mirrored_status'], { mirrored_status: true }))
+    expect(frag).toBe('... on MirrorValue { display_value }')
+  })
+
+  it('deduplicates MirrorValue fragment across multiple is_mirror columns', () => {
+    const mirrorSchema: BoardSchema = {
+      m1: { id: 'm1__1', type: 'text', is_mirror: true },
+      m2: { id: 'm2__1', type: 'number', is_mirror: true }
+    }
+    const frag = n(GraphQLBuilder.buildColumnFragments(mirrorSchema, ['m1', 'm2'], { m1: true, m2: true }))
+    expect(frag).toBe('... on MirrorValue { display_value }')
+  })
+
+  it('throws ValidationError when a column has type mirror', () => {
+    const mirrorSchema: BoardSchema = { bad: { id: 'bad__1', type: 'mirror' } }
+    expect(() => GraphQLBuilder.buildColumnFragments(mirrorSchema, ['bad'], { bad: true })).toThrow(
+      'Column type "mirror" is not supported'
+    )
   })
 
   it('returns status fragment for a status column', () => {

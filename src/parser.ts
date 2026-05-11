@@ -5,6 +5,7 @@
  */
 
 import { ColumnValue, RawItem } from './client'
+import { ValidationError } from './errors'
 import { BoardSchema, ColumnDefinition, SelectionMap } from './types'
 
 /**
@@ -127,7 +128,11 @@ export class ResponseParser<TSchema extends BoardSchema> {
         return ResponseParser.parseTag(columnValue)
 
       case 'mirror':
-        return columnValue.text || ''
+        throw new ValidationError(
+          'Column type "mirror" is not supported. Use is_mirror: true on the column definition instead.',
+          'type',
+          'mirror'
+        )
 
       default:
         return columnValue.text || ''
